@@ -8,11 +8,15 @@ import (
 	"google.golang.org/api/bigquery/v2"
 )
 
+// Config has some parameters that are needed for the configuration of the
+// service.
 type Config struct {
 	DatasetID string
 	ProjectID string
 }
 
+// Service instances will be able to make queries. A Service is basically
+// a Query constructor that holds the connection with BigQuery.
 type Service struct {
 	config  Config
 	service *bigquery.Service
@@ -20,6 +24,7 @@ type Service struct {
 
 var errInvalidConfig = errors.New("dataset and project can not be empty")
 
+// New creates a new Service with the given client options and config.
 func New(clientOptions ClientOptions, config Config) (*Service, error) {
 	bqService, err := clientOptions.Service()
 	if err != nil {
@@ -33,6 +38,10 @@ func New(clientOptions ClientOptions, config Config) (*Service, error) {
 	return &Service{config, bqService}, nil
 }
 
+// Query creates a new query with the SQL sentence passed and a series of
+// arguments. You can pass none, which means no additional parameters. The first
+// parameter passed will be the start, that is, the offset in the resultset.
+// The second parameter passed will be the max results allowed per page.
 func (s *Service) Query(query string, args ...uint64) (*Query, error) {
 	start, maxResults, err := queryArgs(args...)
 	if err != nil {

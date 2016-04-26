@@ -9,6 +9,8 @@ import (
 
 const bigqueryScope = "https://www.googleapis.com/auth/bigquery"
 
+// NewJWTConfig returns a JWT Configuration with the BigQuery scope
+// and the data in the provided token file.
 func NewJWTConfig(keyPath string) (*jwt.Config, error) {
 	bytes, err := ioutil.ReadFile(keyPath)
 	if err != nil {
