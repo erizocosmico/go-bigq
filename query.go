@@ -34,11 +34,12 @@ func NewService(clientOptions ClientOptions, config Config) (*Service, error) {
 }
 
 type Query struct {
-	service   *bigquery.Service
-	jobID     string
-	projectID string
-	pageToken string
-	gotRows   uint64
+	service     *bigquery.Service
+	jobID       string
+	projectID   string
+	pageToken   string
+	gotRows     uint64
+	initialRows []*bigquery.TableRow
 }
 
 func (s *Service) Query(query string, args ...uint64) (*Query, error) {
@@ -71,15 +72,21 @@ func (s *Service) Query(query string, args ...uint64) (*Query, error) {
 		return nil, err
 	}
 
-	if err := s.waitForJob(resp.JobReference.JobId); err != nil {
-		return nil, err
+	var rows []*bigquery.TableRow
+	if !resp.JobComplete {
+		if err := s.waitForJob(resp.JobReference.JobId); err != nil {
+			return nil, err
+		}
+	} else {
+		rows = resp.Rows
 	}
 
 	return &Query{
-		jobID:     resp.JobReference.JobId,
-		projectID: s.config.ProjectID,
-		service:   s.service,
-		gotRows:   start,
+		jobID:       resp.JobReference.JobId,
+		projectID:   s.config.ProjectID,
+		service:     s.service,
+		gotRows:     start,
+		initialRows: rows,
 	}, nil
 }
 
@@ -103,6 +110,15 @@ func (s *Service) waitForJob(jobID string) error {
 }
 
 func (q *Query) GetNextPage() ([]*bigquery.TableRow, error) {
+	if q.gotRows == 0 && len(q.initialRows) > 0 {
+		q.gotRows += uint64(len(q.initialRows))
+		return q.initialRows, nil
+	}
+
+	if len(q.initialRows) > 0 {
+		q.initialRows = nil
+	}
+
 	call := q.service.Jobs.GetQueryResults(q.projectID, q.jobID)
 	call.StartIndex(q.gotRows)
 	if q.pageToken != "" {
