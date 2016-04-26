@@ -109,10 +109,10 @@ func (s *Service) waitForJob(jobID string) error {
 	return nil
 }
 
-func (q *Query) GetNextPage() ([]*bigquery.TableRow, error) {
+func (q *Query) GetNextPage() ([][]interface{}, error) {
 	if q.gotRows == 0 && len(q.initialRows) > 0 {
 		q.gotRows += uint64(len(q.initialRows))
-		return q.initialRows, nil
+		return transformRows(q.initialRows), nil
 	}
 
 	if len(q.initialRows) > 0 {
@@ -136,5 +136,21 @@ func (q *Query) GetNextPage() ([]*bigquery.TableRow, error) {
 	}
 
 	q.pageToken = results.PageToken
-	return results.Rows, nil
+	return transformRows(results.Rows), nil
+}
+
+func transformRows(rows []*bigquery.TableRow) [][]interface{} {
+	var result [][]interface{}
+	for _, r := range rows {
+		result = append(result, transformRow(r.F))
+	}
+	return result
+}
+
+func transformRow(row []*bigquery.TableCell) []interface{} {
+	var result []interface{}
+	for _, c := range row {
+		result = append(result, c.V)
+	}
+	return result
 }
