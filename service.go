@@ -59,7 +59,7 @@ func (s *Service) Query(query string, args ...uint64) (*Query, error) {
 		}
 	}
 
-	return newQuery(s.service, resp, s.config.ProjectID, start), nil
+	return newQuery(s.service, resp, s.config.ProjectID, start, maxResults), nil
 }
 
 func (s *Service) requestQuery(query string, maxResults uint64) (*bigquery.QueryResponse, error) {

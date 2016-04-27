@@ -16,6 +16,7 @@ type Query struct {
 	projectID   string
 	pageToken   string
 	sentRows    uint64
+	maxResults  uint64
 	initialRows []*bigquery.TableRow
 }
 
@@ -24,6 +25,7 @@ func newQuery(
 	resp *bigquery.QueryResponse,
 	projectID string,
 	start uint64,
+	maxResults uint64,
 ) *Query {
 	var rows []*bigquery.TableRow
 	if resp.JobComplete && start == 0 {
@@ -36,6 +38,7 @@ func newQuery(
 		service:     service,
 		sentRows:    start,
 		initialRows: rows,
+		maxResults:  maxResults,
 	}
 }
 
@@ -58,6 +61,11 @@ func (q *Query) NextPage() ([][]interface{}, error) {
 
 	call := q.service.Jobs.GetQueryResults(q.projectID, q.jobID)
 	call.StartIndex(q.sentRows)
+
+	if q.maxResults > 0 {
+		call.MaxResults(int64(q.maxResults))
+	}
+
 	if q.pageToken != "" {
 		call.PageToken(q.pageToken)
 	}
