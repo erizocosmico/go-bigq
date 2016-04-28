@@ -18,6 +18,7 @@ type Query struct {
 	sentRows    uint64
 	maxResults  uint64
 	initialRows []*bigquery.TableRow
+	mode        queryResultMode
 }
 
 func newQuery(
@@ -39,16 +40,34 @@ func newQuery(
 		sentRows:    start,
 		initialRows: rows,
 		maxResults:  maxResults,
+		mode:        pageMode,
 	}
 }
 
-var errAlreadyReading = errors.New("can't use NextPage after calling All")
+var (
+	errAlreadyReading = errors.New("can't use NextPage after calling All")
+	errInvalidMode    = errors.New("invalid mode: can't use NextPage after using Iter")
+)
+
+type queryResultMode int
+
+const (
+	pageMode queryResultMode = 1 << iota
+	iterMode
+)
 
 // NextPage returns the next page of rows in the query resultset. It returns up
 // to the max results that were given to the query on its creation. Note that
 // BigQuery has a limit of 10MB, that is, when your page reaches the 10MB limit
 // it will yield and will not return the max number of results instead.
 func (q *Query) NextPage() ([][]interface{}, error) {
+	if q.mode != pageMode {
+		return nil, errInvalidMode
+	}
+	return q.nextPage()
+}
+
+func (q *Query) nextPage() ([][]interface{}, error) {
 	if q.sentRows == 0 && len(q.initialRows) > 0 {
 		q.sentRows += uint64(len(q.initialRows))
 		return transformRows(q.initialRows), nil
@@ -82,6 +101,15 @@ func (q *Query) NextPage() ([][]interface{}, error) {
 
 	q.pageToken = results.PageToken
 	return transformRows(results.Rows), nil
+}
+
+// Iter returns an iterator to retrieve the query results.
+// Using this method sets the query in "iter" mode, that is,
+// the NextPage method can't be used after using Iter, but it
+// can be used before retrieving the iterator.
+func (q *Query) Iter() *Iter {
+	q.mode = iterMode
+	return &Iter{q: q}
 }
 
 func transformRows(rows []*bigquery.TableRow) [][]interface{} {
