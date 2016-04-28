@@ -42,7 +42,7 @@ func New(clientOptions ClientOptions, config Config) (*Service, error) {
 // arguments. You can pass none, which means no additional parameters. The first
 // parameter passed will be the start, that is, the offset in the resultset.
 // The second parameter passed will be the max results allowed per page.
-func (s *Service) Query(query string, args ...uint64) (*Query, error) {
+func (s *Service) Query(query string, args ...uint64) (Query, error) {
 	start, maxResults, err := queryArgs(args...)
 	if err != nil {
 		return nil, err

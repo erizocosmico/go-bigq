@@ -14,7 +14,7 @@ func TestNextPage(t *testing.T) {
 	})
 	assert.Nil(err)
 
-	q, err := service.Query(query, 0, 5)
+	q, err := service.Query(testQuery, 0, 5)
 	assert.Nil(err)
 	assert.NotNil(q)
 
