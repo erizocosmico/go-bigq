@@ -6,8 +6,26 @@ import (
 )
 
 // Iter is a structure to loop through query results.
-type Iter struct {
-	q    *Query
+type Iter interface {
+	// Next fetches the next row and fills the fields of the given
+	// struct pointer with the columns of the row in appearance order.
+	// For example, given:
+	//  struct {
+	//          Foo int
+	//          Bar int
+	//  }
+	//
+	// The row 1, 2 would result in struct{Foo: 1, Bar:2}
+	// This method returns a boolean reporting if the operation was
+	// successful.
+	Next(interface{}) bool
+
+	// Err returns the latest error that happened.
+	Err() error
+}
+
+type iter struct {
+	q    Query
 	rows [][]interface{}
 	idx  int
 	err  error
@@ -24,10 +42,14 @@ type Iter struct {
 // The row 1, 2 would result in struct{Foo: 1, Bar:2}
 // This method returns a boolean reporting if the operation was
 // successful.
-func (i *Iter) Next(dst interface{}) bool {
-	if i.idx >= len(i.rows)-1 || len(i.rows) == 0 {
+func (i *iter) Next(dst interface{}) bool {
+	if i.idx >= len(i.rows) || len(i.rows) == 0 {
 		if err := i.requestNextPage(); err != nil {
 			i.err = err
+			return false
+		}
+
+		if len(i.rows) == 0 {
 			return false
 		}
 	}
@@ -41,8 +63,8 @@ func (i *Iter) Next(dst interface{}) bool {
 	return true
 }
 
-func (i *Iter) requestNextPage() error {
-	rows, err := i.q.nextPage()
+func (i *iter) requestNextPage() error {
+	rows, err := i.q.(*query).nextPage()
 	if err != nil {
 		return err
 	}
@@ -52,13 +74,14 @@ func (i *Iter) requestNextPage() error {
 	return nil
 }
 
-func (i *Iter) scan(dst interface{}) error {
+func (i *iter) scan(dst interface{}) error {
 	v := reflect.ValueOf(dst)
 	if v.Kind() != reflect.Ptr {
 		return fmt.Errorf("value of type %s is not a pointer", v.Type())
 	}
 
-	v, t := v.Elem(), v.Type()
+	v = v.Elem()
+	t := v.Type()
 	row := i.rows[i.idx]
 
 	var ignored int
@@ -81,6 +104,6 @@ func (i *Iter) scan(dst interface{}) error {
 }
 
 // Err returns the latest error that happened.
-func (i *Iter) Err() error {
+func (i *iter) Err() error {
 	return i.err
 }

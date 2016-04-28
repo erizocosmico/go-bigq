@@ -3,7 +3,7 @@ package bigq
 import (
 	"testing"
 
-	"github.com/alecthomas/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestServiceNew(t *testing.T) {
@@ -16,7 +16,7 @@ func TestServiceNew(t *testing.T) {
 	assert.NotNil(service)
 }
 
-const query = `SELECT word
+const testQuery = `SELECT word
 FROM [publicdata:samples.shakespeare]
 ORDER BY word DESC
 LIMIT 20`
@@ -29,7 +29,7 @@ func TestServiceQuery(t *testing.T) {
 	})
 	assert.Nil(err)
 
-	q, err := service.Query(query, 0, 5)
+	q, err := service.Query(testQuery, 0, 5)
 	assert.Nil(err)
 	assert.NotNil(q)
 }
