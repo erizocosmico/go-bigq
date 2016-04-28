@@ -25,8 +25,37 @@ handleErr(err)
 doSomethingWith(rows)
 ```
 
+## Loop through results using an iterator
+
+```go
+// Create the service
+service, err := bigq.New(bigq.WithConfigFile("/path/to/token.json"), bigq.Config{
+	ProjectID: "my-project",
+	DatasetID: "my-dataset",
+})
+handleErr(err)
+
+// Perform the query starting at 0 index and with 100 results per page
+q, err := service.Query("SELECT foo FROM bar WHERE baz", 0, 100)
+handleErr(err)
+
+
+// Get iterator
+iter := q.Iter()
+
+var myStruct struct {
+	FirstCol  string
+	SecondCol int
+	ThirdCol  float64
+	FourthCol bool
+}
+
+for iter.Next(&myStruct) {
+	use(myStruct)
+}
+handleErr(iter.Err())
+```
+
 ## TODO
 
 * `Service` method to perform queries with large results (queries whose results have to go to another table).
-* Think of a nicer way to return the pages, rather than `[][]interface{}`.
-* `Next` iterator-ish method to retrieve the results and fill a struct with them.
